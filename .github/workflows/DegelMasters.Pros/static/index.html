@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Degel Masters Web [BETA]</title>
+    <link rel="icon" href="DEFOTO.png" type="image/x-icon">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #2c2c2c;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h2 {
+            color: #f1f1f1;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        #postContainer {
+            width: 100%;
+            max-width: 600px;
+            margin: auto;
+        }
+
+        .post {
+            border: 1px solid #555;
+            padding: 15px;
+            margin: 10px 0;
+            background: #444;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            text-align: right;
+            direction: rtl;
+        }
+
+        .post img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        textarea, input[type="file"] {
+            width: 90%;
+            max-width: 500px;
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid #666;
+            background: #333;
+            color: white;
+            display: block;
+            margin: 10px auto;
+            font-size: 16px;
+        }
+
+        button {
+            background: #555;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 90%;
+            max-width: 200px;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #777;
+        }
+
+        img {
+            width: 150px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        @media screen and (max-width: 768px) {
+            h2 {
+                font-size: 22px;
+            }
+
+            .post {
+                padding: 12px;
+            }
+
+            button {
+                width: 80%;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            h2 {
+                font-size: 20px;
+            }
+
+            .post {
+                padding: 10px;
+            }
+
+            button {
+                width: 90%;
+            }
+
+            textarea, input[type="file"] {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <img src="DEFOTO.png" alt="תמונה">
+    <h2>Degel Masters Web</h2>
+
+    <!-- פרסום פוסט -->
+    <input type="file" id="imageInput" accept="image/*">
+    <textarea id="postInput" placeholder="?מה עשית/ה היום"></textarea>
+    <button onclick="addPost()">פרסם</button>
+
+    <!-- אזור הפוסטים -->
+    <div id="postContainer"></div>
+
+    <script>
+        async function loadPosts() {
+            const response = await fetch('/posts');
+            const posts = await response.json();
+            const container = document.getElementById("postContainer");
+            container.innerHTML = "";
+
+            posts.forEach((post, index) => {
+                const postElement = document.createElement("div");
+                postElement.className = "post";
+
+                let postHTML = "";
+                if (post.image) {
+                    postHTML += `<img src="${post.image}" alt="Uploaded Image">`;
+                }
+
+                postHTML += `<p>${post.text.replace(/\n/g, "<br>")}</p>`;
+                postHTML += `<button onclick="confirmDelete(${index})">🗑 מחק</button>`;
+
+                postElement.innerHTML = postHTML;
+                container.appendChild(postElement);
+            });
+        }
+
+        async function addPost() {
+            const textInput = document.getElementById("postInput");
+            const fileInput = document.getElementById("imageInput");
+            const text = textInput.value.trim();
+            const file = fileInput.files[0];
+
+            if (!text && !file) return;
+
+            const postObject = { text };
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async function(event) {
+                    postObject.image = event.target.result;
+                    await sendPost(postObject);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                await sendPost(postObject);
+            }
+
+            textInput.value = "";
+            fileInput.value = "";
+        }
+
+        async function sendPost(post) {
+            await fetch('/posts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(post)
+            });
+            await loadPosts();
+        }
+
+        async function confirmDelete(index) {
+            if (confirm("האם אתה בטוח שברצונך למחוק את הפוסט?")) {
+                await fetch(`/posts/${index}`, { method: 'DELETE' });
+                await loadPosts();
+            }
+        }
+
+        window.onload = loadPosts;
+    </script>
+
+    <br>
+    <h6>By Idan</h6>
+</body>
+</html>
